@@ -11,3 +11,8 @@ I collected over 10,000 posts and analyzed them with LifeLines. This is the resu
 ![Kaplan-Meier survival function for Reddit](Kaplan-Meier-Godwin.png)
 
 So, for example, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler is around 60%.
+
+## Running the Code
+You will need python, with [praw](https://praw.readthedocs.org/en/v2.1.19/), [lifelines](http://lifelines.readthedocs.org/en/latest/Quickstart.html), [pandas](http://lifelines.readthedocs.org/en/latest/Quickstart.html).
+First run the "Create Database.py," then "Collect_Posts.py" and finally 
+Also, you will be able to data more quickly by editing the [praw.ini file](http://praw.readthedocs.org/en/latest/pages/configuration_files.html?highlight=ini)
