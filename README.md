@@ -12,6 +12,8 @@ I collected over 10,000 posts and analyzed them with LifeLines. This is the resu
 
 So, for example, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler is around 60%.
 
+However, it should be noted that not every comment mentioning Hitler or the Nazis is making a comparison, and that on the other hand it is possible to make a Hitler or Nazi comparison without using the words "Nazi" or "Hitler" in the post, so I manually read throug all ~1500 posts containing "Hitler" or "Nazi" and changed the flag for those that weren't comparisons. For example, this post is a discussion of [Hans-Ulrich Rudel](http://www.reddit.com/r/todayilearned/comments/2r07pm/til_hansulrich_rudel_is_the_only_person_to_be/cnbinj5), a Nazi, and many of the comments mention Hitler or Nazi, but the commentors are not generally comparing anyone or anything to Nazis. However, [this comment](http://www.reddit.com/r/todayilearned/comments/2r07pm/til_hansulrich_rudel_is_the_only_person_to_be/cnbinj5) does make a comparison. I updated the flags accordingly.
+
 ## Running the Code
 You will need python, with [praw](https://praw.readthedocs.org/en/v2.1.19/), [lifelines](http://lifelines.readthedocs.org/en/latest/Quickstart.html), and [pandas](http://lifelines.readthedocs.org/en/latest/Quickstart.html).
 First run the "Create Database.py," then "Collect_Posts.py" and finally 
