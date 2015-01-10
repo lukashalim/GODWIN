@@ -1,4 +1,4 @@
-# GODWIN
+# GODWIN'S LAw ON REDDiT
 
 Godwin's Law states that, "As an online discussion grows longer, the probability of a comparison involving Nazis or Hitler approaches 1." Godwin explained, "Although deliberately framed as if it were a law of nature or of mathematics, its purpose has always been rhetorical and pedagogical: I wanted folks who glibly compared someone else to Hitler or to Nazis to think a bit harder about the Holocaust." [Source](http://jewcy.com/jewish-arts-and-culture/i_seem_be_verb_18_years_godwins_law#sthash.kLqPt6EY.dpuf) 
 
@@ -10,4 +10,4 @@ I collected over 10,000 posts and analyzed them with LifeLines. This is the resu
 
 ![Kaplan-Meier survival function for Reddit](Kaplan-Meier-Godwin.png)
 
-In other words, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler approaches 60%.
+So, for example, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler is around 60%.
