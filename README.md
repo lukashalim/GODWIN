@@ -6,6 +6,8 @@ Despite Godwin's admonition regarding the rhetorical and pedogogical purpose of 
 
 Since Reddit has a [convenient API](http://www.reddit.com/dev/api) for scraping, I decided to use Reddit as a data source. Python's [lifelines package](http://lifelines.readthedocs.org/en/latest/Intro%20to%20lifelines.html#estimating-the-survival-function-using-kaplan-meier) implements a number of statistical techniques related to "survival analysis." Survival analysis gets is so named because the techniques were created to study time until a death, but it is useful in understanding time until other events. In this case, we want to know how long a discussion with "survive" until a Hitler or Nazi comparison.
 
-I collected over 10,000 posts and analyzed them with LifeLines. This is the resulting Kaplan-Meier survival function
+I collected over 10,000 posts and analyzed them with LifeLines. This is the resulting Kaplan-Meier survival function:
 
 ![Kaplan-Meier survival function for Reddit](Kaplan-Meier-Godwin.png)
+
+In other words, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler approaches 60%.
