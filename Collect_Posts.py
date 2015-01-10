@@ -6,7 +6,6 @@ Created on Wed Nov 05 21:49:00 2014
 """
 import praw
 import time
-import pandas as pd
 import sqlite3
 
 r = praw.Reddit('Comment Scraper 1.0 by Lukas_Halim')
@@ -27,7 +26,7 @@ while post_count < 5000 and not NoMorePosts:
     try:
         time.sleep(2.5)
         post = next(posts)
-        if post.num_comments > 2000:
+        if post.num_comments > 100:
             cursor.execute("SELECT count(*) FROM post where post_id='" + post.id + "'")
             if cursor.fetchone()[0] == 0 and post.num_comments > 1000:
                 post.replace_more_comments(limit=None, threshold=10)
@@ -51,7 +50,7 @@ while post_count < 5000 and not NoMorePosts:
             else:
                 print "already in db"
         else:
-            print "skipping because fewer than 2000"
+            print "skipping because fewer than 100"
     except Exception, err:
         print err
         NoMorePosts = True
