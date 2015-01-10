@@ -8,4 +8,4 @@ Since Reddit has a [convenient API](http://www.reddit.com/dev/api) for scraping,
 
 I collected over 10,000 posts and analyzed them with LifeLines. This is the resulting Kaplan-Meier survival function
 
-![Kaplan-Meier survival function for Reddit](https://www.dropbox.com/s/2ztwl6t97uw2o4q/Kaplan-Meier-Godwin.png?dl=0)
+![Kaplan-Meier survival function for Reddit](Kaplan-Meier-Godwin.png)
