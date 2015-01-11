@@ -10,7 +10,7 @@ I collected over 10,000 posts and analyzed them with LifeLines. This is the resu
 
 ![Kaplan-Meier survival function for Reddit](Kaplan-Meier-Godwin.png)
 
-So, for example, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler is around 60%.
+So, for example, as an Reddit discussion approaches 2000 posts, the probability of a comparison involving Nazis or Hitler is approaches 60%.
 
 However, it should be noted that not every comment mentioning Hitler or the Nazis is making a comparison, and that on the other hand it is possible to make a Hitler or Nazi comparison without using the words "Nazi" or "Hitler" in the post, and when, for example, someone on a Selfie thread randomly posts a picture of Hitler, it's not clear to me how it should be categorized. But to try to be as accurate as possible, I skimmed through all ~1500 comments containing "Hitler" or "Nazi" and tried to change the flag for comments that mentioned Hitler or Nazi but weren't comparisons. For example, this post is a discussion of [Hans-Ulrich Rudel](http://www.reddit.com/r/todayilearned/comments/2r07pm/til_hansulrich_rudel_is_the_only_person_to_be/cnbinj5), a Nazi, and many of the comments mention Hitler or Nazi, but the commentors are not generally comparing anyone or anything to Nazis. The process was tedious and I'm sure I made mistakes - it would have been better to have fed the data into Mechanical Turk and have the Turkers determine which mentions were comparisons. If you'd like to see the data, it's available on [my dropbox](https://www.dropbox.com/s/zs5pgihii86tpx2/Godwin.db?dl=0).
 
