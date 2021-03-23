@@ -23,7 +23,8 @@ class Database():
                        CREATE TABLE post
                        (post_id text, 
                        failure_in_post integer,
-                       subreddit text, 
+                       subreddit text,
+                       post_score integer, 
                        num_comments integer);
                        ''')
         cursor.execute('''
@@ -31,6 +32,7 @@ class Database():
                        (post_id text,
                        comment_url text, 
                        failure_in_comment integer,
+                       comment_score integer,
                        
                        FOREIGN KEY (post_id)
                        REFERENCES post (post_id)

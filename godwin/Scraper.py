@@ -5,25 +5,35 @@ Created on Wed Nov 05 21:49:00 2014
 @author: LukasHalim
 Forked by @edridgedsouza
 '''
-import praw
-import time
+import os.path as path
+import json
 import sqlite3
+import time
+
+import praw
 from tqdm import tqdm
+
 from .Database import Database
+
+cfg = path.join(path.dirname(path.abspath(__file__)),
+                '..', 'config.json')
+with open(path.abspath(cfg)) as f:
+    config = json.load(f)
 
 
 class Scraper():
-    def __init__(self, db: Database=Database('Godwin.db')):
+    def __init__(self, db: Database = Database('Godwin.db')):
         self.dbpath = db.path
-        self.r = praw.Reddit('Comment Scraper 1.0 by Lukas_Halim')
+        self.r = praw.Reddit(client_id=config['client_id'],
+                             client_secret=config['client_secret'],
+                             user_agent='Comment Scraper 1.0 by Lukas_Halim')
         self.failure_words = ['nazi', 'ndsap',
-                            'adolf', 'hitler', 
-                            'fascism', 'fascist']
+                              'adolf', 'hitler',
+                              'fascism', 'fascist']
 
     def scrape(self, subreddit='all', limit=5000):
-        #get_new or get_top
-        subreddit = self.r.get_subreddit(subreddit)
-        posts = subreddit.get_top(limit=None)
+        subreddit = self.r.subreddit(subreddit)
+        posts = subreddit.top(limit=None)
         NoMorePosts = False
 
         post_count = 0
@@ -33,7 +43,7 @@ class Scraper():
         while post_count < limit and not NoMorePosts:
             try:
                 for post in tqdm(posts,
-                                 desc=f'Scraping from /r/{self.subreddit}'):
+                                 desc=f'Scraping from /r/{subreddit}'):
                     post_count += 1
                     self.process_post(post, conn, cursor)
             except Exception as e:
@@ -51,7 +61,7 @@ class Scraper():
                            WHERE post_id = ?''',
                            (post.id, ))
             if cursor.fetchone()[0] == 0:  # If post not yet in db
-                post.replace_more_comments(limit=None)
+                post.comments.replace_more(limit=None)
                 flat_comments = praw.helpers.flatten_tree(post.comments)
 
                 if self.text_fails(post.title + post.text):
@@ -64,11 +74,13 @@ class Scraper():
                                (post_id, 
                                failure_in_post, 
                                subreddit, 
+                               post_score,
                                num_comments)
                                VALUES (?,?,?,?)
                                ''',
                                (post.id, failure_in_post,
                                 post.subreddit.display_name,
+                                post.score,
                                 post.num_comments))
 
                 for comment in flat_comments:
@@ -82,11 +94,13 @@ class Scraper():
                                        INSERT INTO comment 
                                        (post_id, 
                                        comment_url, 
-                                       failure_in_comment)
-                                       VALUES (?,?,?)''',
+                                       failure_in_comment,
+                                       comment_score)
+                                       VALUES (?,?,?,?)''',
                                        (post.id,
                                         comment.permalink,
-                                        failure_in_comment))
+                                        failure_in_comment,
+                                        comment.score))
                 conn.commit()
 
     def text_fails(self, text):
