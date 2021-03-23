@@ -8,6 +8,7 @@ Forked by @edridgedsouza
 import json
 import os.path as path
 import sqlite3
+import sys
 import time
 
 import praw  # TODO: switch to pushshift API psaw or pmaw
@@ -24,6 +25,8 @@ with open(path.abspath(cfg)) as f:
 
 
 class Scraper():
+    DELAY = 2.5  # Rate limit 30 requests per minute
+
     def __init__(self, db: Database = Database('Godwin.db')):
         self.dbpath = db.path
         self.r = praw.Reddit(client_id=config['client_id'],
@@ -45,12 +48,11 @@ class Scraper():
         conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
         
-        for post_count, post in tqdm(enumerate(posts),
+        for post_count, post in tqdm(enumerate(posts), 
                                      desc=f'Scraping from /r/{subreddit}'):
             self.process_post(post, cursor)
-            if post_count % 50 == 0:
+            if post_count % 25 == 0:
                 conn.commit()
-            time.sleep(2.5)  # Rate limit 30 requests per minute
 
         conn.commit()
         conn.close()
@@ -61,7 +63,8 @@ class Scraper():
         iff the post being analyzed has a failure. Else returns None
         """
 
-        if post.num_comments > 10:  # Only allow posts above a certain size
+        post_considered = post.num_comments > 10
+        if post_considered:
             cursor.execute('''
                            SELECT COUNT (*) 
                            FROM post 
@@ -69,6 +72,8 @@ class Scraper():
                            (post.id, ))
 
             if cursor.fetchone()[0] == 0:  # If post not yet in db
+                time.sleep(self.DELAY)
+
                 if self.text_fails(post.title + post.selftext):
                     failure_in_post = 1
                 else:
@@ -116,8 +121,10 @@ class Scraper():
         subs = tree.xpath('//*[@id="listing-parent"]/div[1]/div/span[3]/a')
         subs = [s.text.lower() for s in subs if s.text != 'Home']
 
-        for sub in subs[::-1]:  # Start with smaller ones first
+        for sub_count, sub in enumerate(subs[::-1], 1):  # Start with smaller ones first
             self.scrape(subreddit=sub, limit=limit)
+            print(f'Scraped {sub_count} subreddits', file=sys.stderr)
+
         print('Done scraping')
 
     def text_fails(self, text):
