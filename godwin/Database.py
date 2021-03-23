@@ -7,6 +7,7 @@ Created on Thu Jan 01 16:00:32 2015
 
 import sqlite3
 import os
+import shutil
 
 class Database():
     def __init__(self, path='Godwin.db'):
@@ -40,3 +41,8 @@ class Database():
                        ''')
         conn.commit()
         conn.close()
+
+    def reset_db(self):
+        if os.path.exists(self.path):
+            os.remove(self.path)
+        self.initialize()

@@ -27,6 +27,8 @@ class Scraper():
         self.r = praw.Reddit(client_id=config['client_id'],
                              client_secret=config['client_secret'],
                              user_agent='Godwin\'s law scraper')
+        
+        # This is aptly named
         self.failure_words = ['nazi', 'ndsap',
                               'adolf', 'hitler',
                               'fascism', 'fascist']
@@ -45,7 +47,7 @@ class Scraper():
                 for post in tqdm(posts,
                                 desc=f'Scraping from /r/{subreddit}'):
                     post_count += 1
-                    self.process_post(post, conn, cursor)
+                    self.process_post(post, cursor)
                     if post_count % 100 == 0:
                         conn.commit()
                     time.sleep(2.5)  # Rate limit 30 requests per minute
@@ -56,7 +58,7 @@ class Scraper():
         conn.commit()
         conn.close()
 
-    def process_post(self, post, conn, cursor):
+    def process_post(self, post, cursor):
         if post.num_comments > 100:  # Only allow posts above a certain size
             cursor.execute('''
                            SELECT COUNT (*) 
