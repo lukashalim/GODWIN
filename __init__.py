@@ -1,1 +1,1 @@
-from GODWIN.godwin import Database, Scraper
+from GODWIN import Database, Scraper

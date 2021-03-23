@@ -30,7 +30,7 @@ class Database():
         cursor.execute('''
                        CREATE TABLE comment
                        (post_id text,
-                       comment_url text, 
+                       comment_id text, 
                        failure_in_comment integer,
                        comment_score integer,
                        

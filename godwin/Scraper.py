@@ -26,14 +26,14 @@ class Scraper():
         self.dbpath = db.path
         self.r = praw.Reddit(client_id=config['client_id'],
                              client_secret=config['client_secret'],
-                             user_agent='Comment Scraper 1.0 by Lukas_Halim')
+                             user_agent='Godwin\'s law scraper')
         self.failure_words = ['nazi', 'ndsap',
                               'adolf', 'hitler',
                               'fascism', 'fascist']
 
-    def scrape(self, subreddit='all', limit=5000):
+    def scrape(self, subreddit='all', t='year', limit=5000):
         subreddit = self.r.subreddit(subreddit)
-        posts = subreddit.top(limit=None)
+        posts = subreddit.top(t, limit=None)
         NoMorePosts = False
 
         post_count = 0
@@ -43,9 +43,13 @@ class Scraper():
         while post_count < limit and not NoMorePosts:
             try:
                 for post in tqdm(posts,
-                                 desc=f'Scraping from /r/{subreddit}'):
+                                desc=f'Scraping from /r/{subreddit}'):
                     post_count += 1
                     self.process_post(post, conn, cursor)
+                    if post_count % 100 == 0:
+                        conn.commit()
+                    time.sleep(2.5)  # Rate limit 30 requests per minute
+
             except Exception as e:
                 print(e)
                 NoMorePosts = True
@@ -53,18 +57,15 @@ class Scraper():
         conn.close()
 
     def process_post(self, post, conn, cursor):
-        time.sleep(1)
         if post.num_comments > 100:  # Only allow posts above a certain size
             cursor.execute('''
                            SELECT COUNT (*) 
                            FROM post 
                            WHERE post_id = ?''',
                            (post.id, ))
-            if cursor.fetchone()[0] == 0:  # If post not yet in db
-                post.comments.replace_more(limit=None)
-                flat_comments = praw.helpers.flatten_tree(post.comments)
 
-                if self.text_fails(post.title + post.text):
+            if cursor.fetchone()[0] == 0:  # If post not yet in db
+                if self.text_fails(post.title + post.selftext):
                     failure_in_post = 1
                 else:
                     failure_in_post = 0
@@ -76,12 +77,16 @@ class Scraper():
                                subreddit, 
                                post_score,
                                num_comments)
-                               VALUES (?,?,?,?)
+                               VALUES (?,?,?,?,?)
                                ''',
                                (post.id, failure_in_post,
                                 post.subreddit.display_name,
                                 post.score,
                                 post.num_comments))
+
+                post.comments.replace_more(limit=None)
+                post.comment_sort = 'old'  # Ensure chronological order
+                flat_comments = post.comments.list()
 
                 for comment in flat_comments:
                     if hasattr(comment, 'body'):
@@ -93,15 +98,14 @@ class Scraper():
                         cursor.execute('''
                                        INSERT INTO comment 
                                        (post_id, 
-                                       comment_url, 
+                                       comment_id, 
                                        failure_in_comment,
                                        comment_score)
                                        VALUES (?,?,?,?)''',
                                        (post.id,
-                                        comment.permalink,
+                                        comment.id,
                                         failure_in_comment,
                                         comment.score))
-                conn.commit()
 
     def text_fails(self, text):
         return any(item in text.lower() for item in self.failure_words)
