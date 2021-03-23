@@ -25,7 +25,7 @@ with open(path.abspath(cfg)) as f:
 
 
 class Scraper():
-    DELAY = 2.5  # Rate limit 30 requests per minute
+    DELAY = 60/30 + 0.1  # Rate limit 30 requests per minute
 
     def __init__(self, db: Database = Database('Godwin.db')):
         self.dbpath = db.path
