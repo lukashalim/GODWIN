@@ -5,12 +5,14 @@ Created on Wed Nov 05 21:49:00 2014
 @author: LukasHalim
 Forked by @edridgedsouza
 '''
-import os.path as path
 import json
+import os.path as path
 import sqlite3
 import time
 
-import praw
+import praw  # TODO: switch to pushshift API psaw or pmaw
+import requests
+from lxml import html
 from tqdm import tqdm
 
 from .Database import Database
@@ -27,7 +29,7 @@ class Scraper():
         self.r = praw.Reddit(client_id=config['client_id'],
                              client_secret=config['client_secret'],
                              user_agent='Godwin\'s law scraper')
-        
+
         # This is aptly named
         self.failure_words = {'nazi', 'ndsap',
                               'adolf', 'hitler',
@@ -36,28 +38,20 @@ class Scraper():
                               'eichmann', 'holocaust',
                               'auschwitz', 'swastika'}
 
-    def scrape(self, subreddit='all', t='year', limit=5000):
+    def scrape(self, subreddit='all', limit=None):
         subreddit = self.r.subreddit(subreddit)
-        posts = subreddit.top(t, limit=None)
-        NoMorePosts = False
-
-        post_count = 0
+        posts = subreddit.hot(limit=limit)
 
         conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
-        while post_count < limit and not NoMorePosts:
-            try:
-                for post in tqdm(posts,
-                                desc=f'Scraping from /r/{subreddit}'):
-                    post_count += 1
-                    self.process_post(post, cursor)
-                    if post_count % 100 == 0:
-                        conn.commit()
-                    time.sleep(2.5)  # Rate limit 30 requests per minute
+        
+        for post_count, post in tqdm(enumerate(posts),
+                                     desc=f'Scraping from /r/{subreddit}'):
+            self.process_post(post, cursor)
+            if post_count % 50 == 0:
+                conn.commit()
+            time.sleep(2.5)  # Rate limit 30 requests per minute
 
-            except Exception as e:
-                print(e)
-                NoMorePosts = True
         conn.commit()
         conn.close()
 
@@ -102,20 +96,29 @@ class Scraper():
                     if hasattr(comment, 'body'):
                         if self.text_fails(comment.body):
                             values = (post.id,
-                                        comment.id,
-                                        commentCount)
+                                      comment.id,
+                                      commentCount)
                             cursor.execute('''
                                        INSERT INTO failures 
                                        (post_id, 
                                        comment_id,
                                        num_prev_comments)
                                        VALUES (?,?,?)''',
-                                       values)
+                                           values)
                             return values
         return None
 
+    def scrape_top_subreddits(self):
+        page = requests.get('http://redditlist.com/')
+        tree = html.fromstring(page.text)
 
-                        
+        #creating list of subreddits
+        subs = tree.xpath('//*[@id="listing-parent"]/div[1]/div/span[3]/a')
+        subs = [s.text.lower() for s in subs if s.text != 'Home']
+
+        for sub in subs:
+            self.scrape(subreddit=sub, limit=None)
+        print('Done scraping')
 
     def text_fails(self, text):
         return any(item in text.lower() for item in self.failure_words)
