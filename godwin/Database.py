@@ -29,11 +29,10 @@ class Database():
                        num_comments integer);
                        ''')
         cursor.execute('''
-                       CREATE TABLE comment
+                       CREATE TABLE failures
                        (post_id text,
                        comment_id text, 
-                       failure_in_comment integer,
-                       comment_score integer,
+                       num_prev_comments integer,
                        
                        FOREIGN KEY (post_id)
                        REFERENCES post (post_id)

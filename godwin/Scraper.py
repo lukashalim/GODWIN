@@ -29,9 +29,12 @@ class Scraper():
                              user_agent='Godwin\'s law scraper')
         
         # This is aptly named
-        self.failure_words = ['nazi', 'ndsap',
+        self.failure_words = {'nazi', 'ndsap',
                               'adolf', 'hitler',
-                              'fascism', 'fascist']
+                              'fascism', 'fascist',
+                              'goebbels', 'himmler',
+                              'eichmann', 'holocaust',
+                              'auschwitz', 'swastika'}
 
     def scrape(self, subreddit='all', t='year', limit=5000):
         subreddit = self.r.subreddit(subreddit)
@@ -59,6 +62,11 @@ class Scraper():
         conn.close()
 
     def process_post(self, post, cursor):
+        """
+        Returns tuple of (post id, comment id, num_previous_comments)
+        iff the post being analyzed has a failure. Else returns None
+        """
+
         if post.num_comments > 100:  # Only allow posts above a certain size
             cursor.execute('''
                            SELECT COUNT (*) 
@@ -90,24 +98,24 @@ class Scraper():
                 post.comment_sort = 'old'  # Ensure chronological order
                 flat_comments = post.comments.list()
 
-                for comment in flat_comments:
+                for commentCount, comment in enumerate(flat_comments):
                     if hasattr(comment, 'body'):
                         if self.text_fails(comment.body):
-                            failure_in_comment = 1
-                        else:
-                            failure_in_comment = 0
-
-                        cursor.execute('''
-                                       INSERT INTO comment 
-                                       (post_id, 
-                                       comment_id, 
-                                       failure_in_comment,
-                                       comment_score)
-                                       VALUES (?,?,?,?)''',
-                                       (post.id,
+                            values = (post.id,
                                         comment.id,
-                                        failure_in_comment,
-                                        comment.score))
+                                        commentCount)
+                            cursor.execute('''
+                                       INSERT INTO failures 
+                                       (post_id, 
+                                       comment_id,
+                                       num_prev_comments)
+                                       VALUES (?,?,?)''',
+                                       values)
+                            return values
+        return None
+
+
+                        
 
     def text_fails(self, text):
         return any(item in text.lower() for item in self.failure_words)
