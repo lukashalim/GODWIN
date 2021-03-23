@@ -9,11 +9,12 @@ import praw
 import time
 import sqlite3
 from tqdm import tqdm
+from .Database import Database
 
 
 class Scraper():
-    def __init__(self, db='Godwin.db'):
-        self.db = db
+    def __init__(self, db: Database=Database('Godwin.db')):
+        self.dbpath = db.path
         self.r = praw.Reddit('Comment Scraper 1.0 by Lukas_Halim')
         self.failure_words = ['nazi', 'hitler', 'fascism', 'fascist']
 
@@ -25,7 +26,7 @@ class Scraper():
 
         post_count = 0
 
-        conn = sqlite3.connect(self.db)
+        conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
         while post_count < limit and not NoMorePosts:
             try:
