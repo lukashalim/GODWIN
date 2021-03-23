@@ -14,6 +14,7 @@ Created on Fri Dec 12 22:27:52 2014
 """
 
 import pandas as pd
+import matplotlib.pyplot as plt
 #import csv
 
 import sqlite3
