@@ -11,8 +11,23 @@ cursor = conn.cursor()
 cursor.execute("DROP TABLE COMMENT")
 cursor.execute("DROP TABLE POST")
 cursor.execute("""CREATE TABLE post
-                  (post_title text, post_id text, post_text blob, nazi_in_post integer,subreddit text, comment_num integer, post_created float)
+                  (post_title text, 
+                  post_id text, 
+                  post_text blob, 
+                  nazi_in_post integer,
+                  subreddit text, 
+                  comment_num integer, 
+                  post_created float)
                   """)
 cursor.execute("""CREATE TABLE comment
-                  (post_title text, post_id text, post_text blob, nazi_in_post integer,subreddit text,  comment_num integer, comment_url text, comment_body blob,nazi_in_comment integer,comment_created float)
+                  (post_title text, 
+                  post_id text, 
+                  post_text blob, 
+                  nazi_in_post integer,
+                  subreddit text,  
+                  comment_num integer, 
+                  comment_url text, 
+                  comment_body blob,
+                  nazi_in_comment integer,
+                  comment_created float)
                   """)
