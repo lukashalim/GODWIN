@@ -61,7 +61,7 @@ class Scraper():
         iff the post being analyzed has a failure. Else returns None
         """
 
-        if post.num_comments > 100:  # Only allow posts above a certain size
+        if post.num_comments > 10:  # Only allow posts above a certain size
             cursor.execute('''
                            SELECT COUNT (*) 
                            FROM post 
@@ -108,7 +108,7 @@ class Scraper():
                             return values
         return None
 
-    def scrape_top_subreddits(self):
+    def scrape_top_subreddits(self, limit=100):
         page = requests.get('http://redditlist.com/')
         tree = html.fromstring(page.text)
 
@@ -116,8 +116,8 @@ class Scraper():
         subs = tree.xpath('//*[@id="listing-parent"]/div[1]/div/span[3]/a')
         subs = [s.text.lower() for s in subs if s.text != 'Home']
 
-        for sub in subs:
-            self.scrape(subreddit=sub, limit=None)
+        for sub in subs[::-1]:  # Start with smaller ones first
+            self.scrape(subreddit=sub, limit=limit)
         print('Done scraping')
 
     def text_fails(self, text):
