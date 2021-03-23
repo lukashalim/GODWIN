@@ -16,7 +16,9 @@ class Scraper():
     def __init__(self, db: Database=Database('Godwin.db')):
         self.dbpath = db.path
         self.r = praw.Reddit('Comment Scraper 1.0 by Lukas_Halim')
-        self.failure_words = ['nazi', 'hitler', 'fascism', 'fascist']
+        self.failure_words = ['nazi', 'ndsap',
+                            'adolf', 'hitler', 
+                            'fascism', 'fascist']
 
     def scrape(self, subreddit='all', limit=5000):
         #get_new or get_top
