@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Wed Nov 05 21:49:00 2014
 
 @author: LukasHalim
-"""
+Forked by @edridgedsouza
+'''
 import praw
 import time
 import sqlite3
@@ -11,18 +12,18 @@ from tqdm import tqdm
 
 
 class Scraper():
-    def __init__(self, subreddit='all', db='Godwin.db'):
+    def __init__(self, db='Godwin.db'):
         self.db = db
         self.r = praw.Reddit('Comment Scraper 1.0 by Lukas_Halim')
-        self.subreddit = self.r.get_subreddit(subreddit)
         self.failure_words = ['nazi', 'hitler', 'fascism', 'fascist']
 
-    def scrape(self, limit=5000):
-        post_count = 0
-
+    def scrape(self, subreddit='all', limit=5000):
         #get_new or get_top
-        posts = self.subreddit.get_top(limit=None)
+        subreddit = self.r.get_subreddit(subreddit)
+        posts = subreddit.get_top(limit=None)
         NoMorePosts = False
+
+        post_count = 0
 
         conn = sqlite3.connect(self.db)
         cursor = conn.cursor()
@@ -41,9 +42,10 @@ class Scraper():
     def process_post(self, post, conn, cursor):
         time.sleep(1)
         if post.num_comments > 100:  # Only allow posts above a certain size
-            cursor.execute('''SELECT COUNT (*) 
-                            FROM post 
-                            WHERE post_id = ?''',
+            cursor.execute('''
+                           SELECT COUNT (*) 
+                           FROM post 
+                           WHERE post_id = ?''',
                            (post.id, ))
             if cursor.fetchone()[0] == 0:  # If post not yet in db
                 post.replace_more_comments(limit=None)
@@ -54,12 +56,14 @@ class Scraper():
                 else:
                     failure_in_post = 0
 
-                cursor.execute('''INSERT INTO post 
-                                  (post_id, 
-                                  failure_in_post, 
-                                  subreddit, 
-                                  num_comments)
-                                  VALUES (?,?,?,?)''',
+                cursor.execute('''
+                               INSERT INTO post 
+                               (post_id, 
+                               failure_in_post, 
+                               subreddit, 
+                               num_comments)
+                               VALUES (?,?,?,?)
+                               ''',
                                (post.id, failure_in_post,
                                 post.subreddit.display_name,
                                 post.num_comments))
@@ -81,7 +85,6 @@ class Scraper():
                                         comment.permalink,
                                         failure_in_comment))
                 conn.commit()
-                print("post added")
 
     def text_fails(self, text):
         return any(item in text.lower() for item in self.failure_words)
