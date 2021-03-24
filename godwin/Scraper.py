@@ -43,8 +43,13 @@ class Scraper():
                               'fascism', 'fascist', 'goebbels', 'himmler',
                               'eichmann', 'holocaust', 'auschwitz', 'swastika'}
 
-    def scrape_subreddits(self, time_filter='month', limit=100):
-        subs = self.subs
+    def scrape_subreddits(self, subs=None, time_filter='month', limit=100):
+        if subs is None:
+            subs = self.subs
+        else:
+            if isinstance(subs, str):
+                subs = [subs]
+        subs = [s.lower() for s in subs]
         n_subs = len(subs)
 
         # Start with smaller ones first
@@ -62,7 +67,16 @@ class Scraper():
     def scrape_top(self, subreddit='all', time_filter='month', limit=None):
         time.sleep(self.PRAW_DELAY)
         sub = self.r.subreddit(subreddit)
-        posts = sub.top(time_filter=time_filter, limit=limit)
+        try:
+            posts = list(sub.top(time_filter=time_filter, limit=limit))
+        except Forbidden:
+            try:
+                sub.quaran.opt_in()
+                posts = sub.top(time_filter=time_filter, limit=limit)
+                print(f'Opted in to quarantined /r/{subreddit}')
+            except Forbidden:
+                print(f'Subreddit /r/{subreddit} top posts forbidden')
+                return 1
 
         conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
@@ -73,8 +87,9 @@ class Scraper():
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
+        
         except Forbidden:
-            print(f'Subreddit {subreddit} forbidden')
+            print(f'Subreddit /r/{subreddit} top posts forbidden')
 
         conn.commit()
         conn.close()
@@ -93,8 +108,12 @@ class Scraper():
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
+        
         except Forbidden:
-            print(f'Subreddit {subreddit} forbidden')
+            print(f'Subreddit /r/{subreddit} top commented posts forbidden')
+        
+        conn.commit()
+        conn.close()
 
     def get_most_commented_post_ids(self, subreddit='all', limit=100):
         ids = ['7yd4sz']  # Most commented post ever, for compatibility if fail
@@ -142,7 +161,14 @@ class Scraper():
                            (post.id, ))
 
             if cursor.fetchone()[0] == 0:  # If post not yet in db
-                if self.text_fails(post.title + post.selftext):
+                # This line invokes praw api
+                try:
+                    posttext = post.title + post.selftext
+                except Forbidden:
+                    post.subreddit.quaran.opt_in()
+                    posttext = post.title + post.selftext
+
+                if self.text_fails(posttext):
                     failure_in_post = 1
                 else:
                     failure_in_post = 0
@@ -221,14 +247,16 @@ class Scraper():
 
         # politics, worldnews, and news already represented
         # These are political and political-adjacent
-        political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism',
-                     'asktrumpsupporters', 'badeconomics', 'breadtube',
-                     'completeanarchy', 'conservative', 'conspiracy',
-                     'enlightenedcentrism', 'fullcommunism', 'genzedong',
-                     'latestagecapitalism', 'libertarian', 'moderatepolitics',
-                     'neoliberal', 'neutralpolitics', 'coronavirus', 'politicaldiscussion',
-                     'politicalhumor', 'progressive', 'russialago', 'socialism',
-                     'subredditdrama', 'topmindsofreddit']
+        political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism', 
+                     'asktrumpsupporters', 'badeconomics', 'breadtube', 
+                     'completeanarchy', 'conservative', 'conspiracy', 
+                     'enlightenedcentrism', 'feminism', 'fullcommunism', 
+                     'genzedong', 'kotakuinaction', 'latestagecapitalism', 
+                     'libertarian', 'mensrights','moderatepolitics',
+                     'neoliberal', 'neutralpolitics', 'coronavirus', 
+                     'politicaldiscussion', 'politicalhumor', 'progressive', 
+                     'russialago', 'socialism', 'subredditdrama', 'theredpill', 
+                     'topmindsofreddit']
 
         # Doing this instead of sets to maintain order
         subs = active_subs + [s for s in popular_subs if s not in active_subs]
