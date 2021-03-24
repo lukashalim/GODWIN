@@ -42,13 +42,14 @@ class Scraper():
                               'fascism', 'fascist', 'goebbels', 'himmler',
                               'eichmann', 'holocaust', 'auschwitz', 'swastika'}
 
-    def scrape_top_subreddits(self, time_filter='month', limit=100):
+    def scrape_subreddits(self, time_filter='month', limit=100):
         subs = self.popular_subs
         n_subs = len(subs)
 
         # Start with smaller ones first
         for sub_count, sub in enumerate(subs, 1):
             self.scrape_top(subreddit=sub, time_filter=time_filter, limit=limit)
+            self.scrape_most_commented(subreddit=sub, limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
 
@@ -63,9 +64,9 @@ class Scraper():
         cursor = conn.cursor()
 
         try:
-            for post_count, post in tqdm(enumerate(posts),
-                                         desc=f'Scraping from /r/{subreddit}'):
-                self.process_post_obj(post, cursor)
+            desc = f'Scraping top posts of {time_filter} from /r/{subreddit}'
+            for post_count, post in tqdm(enumerate(posts), desc=desc):
+                self.process_post(post, cursor)
                 if post_count and post_count % 25 == 0:
                     conn.commit()
         except Forbidden:
@@ -74,7 +75,46 @@ class Scraper():
         conn.commit()
         conn.close()
 
-    def process_post_obj(self, post, cursor):
+    def scrape_most_commented(self, subreddit='all', limit=100):
+
+        posts = self.get_most_commented_post_ids(subreddit=subreddit,
+                                                 limit=limit)
+
+        conn = sqlite3.connect(self.dbpath)
+        cursor = conn.cursor()
+
+        try:
+            desc = f'Scraping most commented posts from /r/{subreddit}'
+            for post_count, post in tqdm(enumerate(posts), desc=desc):
+                self.process_post(post, cursor)
+                if post_count and post_count % 25 == 0:
+                    conn.commit()
+        except Forbidden:
+            print(f'Subreddit {subreddit} forbidden')
+
+    def get_most_commented_post_ids(self, subreddit='all', limit=100):
+        ids = ['7yd4sz']  # Most commented post ever, for compatibility if fail
+
+        session = requests.Session()  # https://stackoverflow.com/a/45470227/15014819
+        session.hooks = {
+            'response': lambda r, *args, **kwargs: r.raise_for_status()
+        }
+
+        try:
+            params = {'subreddit': subreddit, 'limit': limit,
+                      'sort_type': 'num_comments'}
+            posts = session.get('https://api.pushshift.io/reddit/search/submission/',
+                                params=params)
+            posts = posts.json()['data']
+            if posts:
+                ids = [p['id'] for p in posts]
+
+        except requests.HTTPError:
+            print(f'Error getting most commented posts from /r/{subreddit}')
+
+        return ids
+
+    def process_post(self, post, cursor):
         """
         Returns tuple of (post id, comment id, num_previous_comments)
         iff the post being analyzed has a failure. Else returns None
@@ -117,7 +157,7 @@ class Scraper():
                                    values)
 
     def process_post_comments(self, postid):
-        session = requests.Session()  # https://stackoverflow.com/a/45470227/15014819
+        session = requests.Session()
         session.hooks = {
             'response': lambda r, *args, **kwargs: r.raise_for_status()
         }
@@ -162,12 +202,12 @@ class Scraper():
                                  '/div[1]/div/span[3]/a')
         popular_subs = tree.xpath('//*[@id="listing-parent"]'
                                   '/div[2]/div/span[3]/a')
-        
+
         active_subs = [s.text.lower() for s in active_subs
                        if s.text != 'Home'][::-1]
         popular_subs = [s.text.lower()
                         for s in popular_subs][::-1] + ['popular', 'all']
-        
+
         subs = active_subs + [s for s in popular_subs if s not in active_subs]
-        
+
         return subs
