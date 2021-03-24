@@ -72,18 +72,19 @@ class Scraper():
         except Forbidden:
             try:
                 sub.quaran.opt_in()
-                posts = sub.top(time_filter=time_filter, limit=limit)
+                posts = list(sub.top(time_filter=time_filter, limit=limit))
                 print(f'Opted in to quarantined /r/{subreddit}')
             except Forbidden:
                 print(f'Subreddit /r/{subreddit} top posts forbidden')
-                return 1
+                return None
 
         conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
 
         try:
             desc = f'Scraping top posts of {time_filter} from /r/{subreddit}'
-            for post_count, post in tqdm(enumerate(posts), desc=desc):
+            for post_count, post in tqdm(enumerate(posts), total=len(posts),
+                                         desc=desc):
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
@@ -104,7 +105,8 @@ class Scraper():
 
         try:
             desc = f'Scraping most commented posts from /r/{subreddit}'
-            for post_count, post in tqdm(enumerate(posts), desc=desc):
+            for post_count, post in tqdm(enumerate(posts), total=len(posts),
+                                         desc=desc):
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
