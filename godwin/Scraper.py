@@ -35,30 +35,20 @@ class Scraper():
                              client_secret=config['client_secret'],
                              user_agent='Godwin\'s law scraper')
 
+        self.popular_subs = self.get_popular_subs()
+
         # This is aptly named
         self.failure_words = {'nazi', 'ndsap', 'adolf', 'hitler',
                               'fascism', 'fascist', 'goebbels', 'himmler',
                               'eichmann', 'holocaust', 'auschwitz', 'swastika'}
 
-    def scrape_top_subreddits(self, limit=100):
-        page = requests.get('http://redditlist.com/')
-        tree = html.fromstring(page.text)
-
-        # creating list of subreddits
-        active_subs = tree.xpath('//*[@id="listing-parent"]'
-                                 '/div[1]/div/span[3]/a')
-        popular_subs = tree.xpath('//*[@id="listing-parent"]'
-                                  '/div[2]/div/span[3]/a')
-        active_subs = [s.text.lower() for s in active_subs
-                       if s.text != 'Home'][::-1]
-        popular_subs = [s.text.lower()
-                        for s in popular_subs][::-1] + ['popular', 'all']
-        subs = active_subs + [s for s in popular_subs if s not in active_subs]
+    def scrape_top_subreddits(self, time_filter='month', limit=100):
+        subs = self.popular_subs
         n_subs = len(subs)
 
         # Start with smaller ones first
         for sub_count, sub in enumerate(subs, 1):
-            self.scrape(subreddit=sub, limit=limit)
+            self.scrape(subreddit=sub, time_filter=time_filter, limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
 
@@ -75,7 +65,7 @@ class Scraper():
         try:
             for post_count, post in tqdm(enumerate(posts),
                                          desc=f'Scraping from /r/{subreddit}'):
-                self.process_post(post, cursor)
+                self.process_post_obj(post, cursor)
                 if post_count and post_count % 25 == 0:
                     conn.commit()
         except Forbidden:
@@ -84,7 +74,7 @@ class Scraper():
         conn.commit()
         conn.close()
 
-    def process_post(self, post, cursor):
+    def process_post_obj(self, post, cursor):
         """
         Returns tuple of (post id, comment id, num_previous_comments)
         iff the post being analyzed has a failure. Else returns None
@@ -114,7 +104,7 @@ class Scraper():
                                ''',
                                values)
 
-                values = self.process_comments(post.id)
+                values = self.process_post_comments(post.id)
 
                 if values[1] is not None:
                     cursor.execute('''
@@ -124,7 +114,7 @@ class Scraper():
                                    ''',
                                    values)
 
-    def process_comments(self, postid):
+    def process_post_comments(self, postid):
         session = requests.Session()  # https://stackoverflow.com/a/45470227/15014819
         session.hooks = {
             'response': lambda r, *args, **kwargs: r.raise_for_status()
@@ -160,3 +150,22 @@ class Scraper():
 
     def text_fails(self, text):
         return any(item in text.lower() for item in self.failure_words)
+
+    @staticmethod
+    def get_popular_subs():
+        page = requests.get('http://redditlist.com/')
+        tree = html.fromstring(page.text)
+
+        active_subs = tree.xpath('//*[@id="listing-parent"]'
+                                 '/div[1]/div/span[3]/a')
+        popular_subs = tree.xpath('//*[@id="listing-parent"]'
+                                  '/div[2]/div/span[3]/a')
+        
+        active_subs = [s.text.lower() for s in active_subs
+                       if s.text != 'Home'][::-1]
+        popular_subs = [s.text.lower()
+                        for s in popular_subs][::-1] + ['popular', 'all']
+        
+        subs = active_subs + [s for s in popular_subs if s not in active_subs]
+        
+        return subs
