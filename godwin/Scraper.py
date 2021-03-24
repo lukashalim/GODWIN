@@ -48,13 +48,13 @@ class Scraper():
 
         # Start with smaller ones first
         for sub_count, sub in enumerate(subs, 1):
-            self.scrape(subreddit=sub, time_filter=time_filter, limit=limit)
+            self.scrape_top(subreddit=sub, time_filter=time_filter, limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
 
         print('Done scraping')
 
-    def scrape(self, subreddit='all', time_filter='month', limit=None):
+    def scrape_top(self, subreddit='all', time_filter='month', limit=None):
         time.sleep(self.PRAW_DELAY)
         sub = self.r.subreddit(subreddit)
         posts = sub.top(time_filter=time_filter, limit=limit)
@@ -79,6 +79,8 @@ class Scraper():
         Returns tuple of (post id, comment id, num_previous_comments)
         iff the post being analyzed has a failure. Else returns None
         """
+        if isinstance(post, str):
+            post = self.r.submission(id=post)
 
         post_considered = post.num_comments > 10
         if post_considered:
