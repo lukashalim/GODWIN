@@ -7,6 +7,8 @@ Created on Thu Jan 01 16:00:32 2015
 
 import sqlite3
 import os
+import pandas as pd
+from contextlib import closing
 
 class Database():
     def __init__(self, path='Godwin.db'):
@@ -50,3 +52,32 @@ class Database():
                 pass
         self.initialize()
         return self
+
+    def execute_sql(self, sql, params=()):
+        with closing(sqlite3.connect(self.path)) as conn:
+            with conn:
+                cur = conn.cursor()
+                cur.execute(sql, params)
+                res = cur.fetchall()
+
+                if res:
+                    df = pd.DataFrame(res)
+                    df.columns = [d[0] for d in cur.description]
+                else:
+                    df = pd.DataFrame({})
+        return df
+
+    def get_data(self):
+        qry = '''
+              SELECT p.post_id, failure_in_post, subreddit, 
+                  post_score, num_comments,
+                  f.comment_id, num_prev_comments
+              FROM
+                  post p
+              LEFT JOIN
+                  failures f
+              ON
+                  p.post_id = f.post_id
+              '''
+        df = self.execute_sql(qry)
+        return df

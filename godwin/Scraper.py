@@ -36,24 +36,28 @@ class Scraper():
                              user_agent='Godwin\'s law scraper')
 
         # This is aptly named
-        self.failure_words = {'nazi', 'ndsap',
-                              'adolf', 'hitler',
-                              'fascism', 'fascist',
-                              'goebbels', 'himmler',
-                              'eichmann', 'holocaust',
-                              'auschwitz', 'swastika'}
+        self.failure_words = {'nazi', 'ndsap', 'adolf', 'hitler',
+                              'fascism', 'fascist', 'goebbels', 'himmler',
+                              'eichmann', 'holocaust', 'auschwitz', 'swastika'}
 
     def scrape_top_subreddits(self, limit=100):
         page = requests.get('http://redditlist.com/')
         tree = html.fromstring(page.text)
 
         # creating list of subreddits
-        subs = tree.xpath('//*[@id="listing-parent"]/div[1]/div/span[3]/a')
-        subs = [s.text.lower() for s in subs if s.text != 'Home']
+        active_subs = tree.xpath('//*[@id="listing-parent"]'
+                                 '/div[1]/div/span[3]/a')
+        popular_subs = tree.xpath('//*[@id="listing-parent"]'
+                                  '/div[2]/div/span[3]/a')
+        active_subs = [s.text.lower() for s in active_subs
+                       if s.text != 'Home'][::-1]
+        popular_subs = [s.text.lower()
+                        for s in popular_subs][::-1] + ['popular', 'all']
+        subs = active_subs + [s for s in popular_subs if s not in active_subs]
         n_subs = len(subs)
 
         # Start with smaller ones first
-        for sub_count, sub in enumerate(subs[::-1], 1):
+        for sub_count, sub in enumerate(subs, 1):
             self.scrape(subreddit=sub, limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
@@ -70,7 +74,7 @@ class Scraper():
 
         try:
             for post_count, post in tqdm(enumerate(posts),
-                                        desc=f'Scraping from /r/{subreddit}'):
+                                         desc=f'Scraping from /r/{subreddit}'):
                 self.process_post(post, cursor)
                 if post_count and post_count % 25 == 0:
                     conn.commit()
@@ -100,29 +104,24 @@ class Scraper():
                 else:
                     failure_in_post = 0
 
+                values = (post.id, failure_in_post, post.subreddit.display_name,
+                          post.score, post.num_comments)
                 cursor.execute('''
                                INSERT INTO post 
-                               (post_id, 
-                               failure_in_post, 
-                               subreddit, 
-                               post_score,
-                               num_comments)
+                               (post_id, failure_in_post, subreddit, 
+                               post_score, num_comments)
                                VALUES (?,?,?,?,?)
                                ''',
-                               (post.id, failure_in_post,
-                                post.subreddit.display_name,
-                                post.score,
-                                post.num_comments))
+                               values)
 
                 values = self.process_comments(post.id)
 
                 if values[1] is not None:
                     cursor.execute('''
-                                    INSERT INTO failures 
-                                    (post_id, 
-                                    comment_id,
-                                    num_prev_comments)
-                                    VALUES (?,?,?)''',
+                                   INSERT INTO failures 
+                                   (post_id, comment_id, num_prev_comments)
+                                   VALUES (?,?,?)
+                                   ''',
                                    values)
 
     def process_comments(self, postid):
@@ -151,7 +150,7 @@ class Scraper():
                             return (postid, comment['id'], comment_index)
 
                     after = results[-1]['created_utc']
-                
+
                 # time.sleep(self.PS_DELAY)  # Honestly probably unnecessary
 
             except requests.HTTPError:
