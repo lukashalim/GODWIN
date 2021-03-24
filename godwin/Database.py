@@ -3,6 +3,7 @@
 Created on Thu Jan 01 16:00:32 2015
 
 @author: LukasHalim
+Forked by @edridgedsouza
 '''
 
 import sqlite3

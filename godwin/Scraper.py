@@ -28,6 +28,7 @@ with open(path.abspath(cfg)) as f:
 class Scraper():
     PRAW_DELAY = 60/30 + 0.25  # Rate limit 30 requests per minute
     PS_DELAY = 60/200 + 0.05  # Pushshift rate limit to 200 per minute
+    COMMIT_CHUNK = 10
 
     def __init__(self, db: Database = Database('Godwin.db')):
         self.dbpath = db.path
@@ -35,7 +36,7 @@ class Scraper():
                              client_secret=config['client_secret'],
                              user_agent='Godwin\'s law scraper')
 
-        self.popular_subs = self.get_popular_subs()
+        self.subs = self.get_subs()
 
         # This is aptly named
         self.failure_words = {'nazi', 'ndsap', 'adolf', 'hitler',
@@ -43,13 +44,16 @@ class Scraper():
                               'eichmann', 'holocaust', 'auschwitz', 'swastika'}
 
     def scrape_subreddits(self, time_filter='month', limit=100):
-        subs = self.popular_subs
+        subs = self.subs
         n_subs = len(subs)
 
         # Start with smaller ones first
         for sub_count, sub in enumerate(subs, 1):
-            self.scrape_top(subreddit=sub, time_filter=time_filter, limit=limit)
-            self.scrape_most_commented(subreddit=sub, limit=limit)
+            self.scrape_top(subreddit=sub, 
+                            time_filter=time_filter,
+                            limit=limit)
+            self.scrape_most_commented(subreddit=sub, 
+                                       limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
 
@@ -67,7 +71,7 @@ class Scraper():
             desc = f'Scraping top posts of {time_filter} from /r/{subreddit}'
             for post_count, post in tqdm(enumerate(posts), desc=desc):
                 self.process_post(post, cursor)
-                if post_count and post_count % 25 == 0:
+                if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
         except Forbidden:
             print(f'Subreddit {subreddit} forbidden')
@@ -87,7 +91,7 @@ class Scraper():
             desc = f'Scraping most commented posts from /r/{subreddit}'
             for post_count, post in tqdm(enumerate(posts), desc=desc):
                 self.process_post(post, cursor)
-                if post_count and post_count % 25 == 0:
+                if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
         except Forbidden:
             print(f'Subreddit {subreddit} forbidden')
@@ -101,11 +105,14 @@ class Scraper():
         }
 
         try:
-            params = {'subreddit': subreddit, 'limit': limit,
-                      'sort_type': 'num_comments'}
+            params = {'limit': limit, 'sort_type': 'num_comments'}
+            if subreddit not in ['all', 'popular']:
+                params.update({'subreddit': subreddit})
+
             posts = session.get('https://api.pushshift.io/reddit/search/submission/',
                                 params=params)
             posts = posts.json()['data']
+
             if posts:
                 ids = [p['id'] for p in posts]
 
@@ -121,8 +128,12 @@ class Scraper():
         """
         if isinstance(post, str):
             post = self.r.submission(id=post)
+            post_considered = True
+        else:
+            # If it's already a reddit submission object, doesn't take forever
+            # to get the comment count
+            post_considered = post.num_comments > 10
 
-        post_considered = post.num_comments > 10
         if post_considered:
             cursor.execute('''
                            SELECT COUNT (*) 
@@ -194,7 +205,7 @@ class Scraper():
         return any(item in text.lower() for item in self.failure_words)
 
     @staticmethod
-    def get_popular_subs():
+    def get_subs():
         page = requests.get('http://redditlist.com/')
         tree = html.fromstring(page.text)
 
@@ -206,8 +217,22 @@ class Scraper():
         active_subs = [s.text.lower() for s in active_subs
                        if s.text != 'Home'][::-1]
         popular_subs = [s.text.lower()
-                        for s in popular_subs][::-1] + ['popular', 'all']
+                        for s in popular_subs][::-1]
 
+        # politics, worldnews, and news already represented
+        # These are political and political-adjacent
+        political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism',
+                     'asktrumpsupporters', 'badeconomics', 'breadtube',
+                     'completeanarchy', 'conservative', 'conspiracy',
+                     'enlightenedcentrism', 'fullcommunism', 'genzedong',
+                     'latestagecapitalism', 'libertarian', 'moderatepolitics',
+                     'neoliberal', 'neutralpolitics', 'coronavirus', 'politicaldiscussion',
+                     'politicalhumor', 'progressive', 'russialago', 'socialism',
+                     'subredditdrama', 'topmindsofreddit']
+
+        # Doing this instead of sets to maintain order
         subs = active_subs + [s for s in popular_subs if s not in active_subs]
+        political = [i for i in political if i not in subs]
+        subs = subs + political + ['popular', 'all']
 
         return subs
