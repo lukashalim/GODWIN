@@ -9,12 +9,12 @@ import json
 import os.path as path
 import sqlite3
 import sys
-import requests
 import time
 
 import praw
 import requests
 from lxml import html
+from prawcore.exceptions import Forbidden
 from tqdm import tqdm
 
 from .Database import Database
@@ -62,17 +62,20 @@ class Scraper():
 
     def scrape(self, subreddit='all', time_filter='month', limit=None):
         time.sleep(self.PRAW_DELAY)
-        subreddit = self.r.subreddit(subreddit)
-        posts = subreddit.top(time_filter=time_filter, limit=limit)
+        sub = self.r.subreddit(subreddit)
+        posts = sub.top(time_filter=time_filter, limit=limit)
 
         conn = sqlite3.connect(self.dbpath)
         cursor = conn.cursor()
 
-        for post_count, post in tqdm(enumerate(posts),
-                                     desc=f'Scraping from /r/{subreddit}'):
-            self.process_post(post, cursor)
-            if post_count and post_count % 25 == 0:
-                conn.commit()
+        try:
+            for post_count, post in tqdm(enumerate(posts),
+                                        desc=f'Scraping from /r/{subreddit}'):
+                self.process_post(post, cursor)
+                if post_count and post_count % 25 == 0:
+                    conn.commit()
+        except Forbidden:
+            print(f'Subreddit {subreddit} forbidden')
 
         conn.commit()
         conn.close()
