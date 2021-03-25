@@ -54,10 +54,10 @@ class Scraper():
 
         # Start with smaller ones first
         for sub_count, sub in enumerate(subs, 1):
-            self.scrape_top(subreddit=sub, 
+            self.scrape_top(subreddit=sub,
                             time_filter=time_filter,
                             limit=limit)
-            self.scrape_most_commented(subreddit=sub, 
+            self.scrape_most_commented(subreddit=sub,
                                        limit=limit)
             print(f'Scraped {sub_count} of {n_subs} subreddits',
                   file=sys.stderr)
@@ -69,11 +69,13 @@ class Scraper():
         sub = self.r.subreddit(subreddit)
         try:
             posts = list(sub.top(time_filter=time_filter, limit=limit))
+
         except Forbidden:
             try:
                 sub.quaran.opt_in()
                 posts = list(sub.top(time_filter=time_filter, limit=limit))
                 print(f'Opted in to quarantined /r/{subreddit}')
+
             except Forbidden:
                 print(f'Subreddit /r/{subreddit} top posts forbidden')
                 return None
@@ -88,9 +90,12 @@ class Scraper():
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
-        
+
         except Forbidden:
             print(f'Subreddit /r/{subreddit} top posts forbidden')
+
+        except KeyboardInterrupt:
+            self.exit_safely(conn)
 
         conn.commit()
         conn.close()
@@ -110,10 +115,13 @@ class Scraper():
                 self.process_post(post, cursor)
                 if post_count and post_count % self.COMMIT_CHUNK == 0:
                     conn.commit()
-        
+
         except Forbidden:
             print(f'Subreddit /r/{subreddit} top commented posts forbidden')
-        
+
+        except KeyboardInterrupt:
+            self.exit_safely(conn)
+
         conn.commit()
         conn.close()
 
@@ -233,6 +241,12 @@ class Scraper():
         return any(item in text.lower() for item in self.failure_words)
 
     @staticmethod
+    def exit_safely(conn):
+        conn.commit()
+        conn.close()
+        raise KeyboardInterrupt
+
+    @staticmethod
     def get_subs():
         page = requests.get('http://redditlist.com/')
         tree = html.fromstring(page.text)
@@ -249,16 +263,20 @@ class Scraper():
 
         # politics, worldnews, and news already represented
         # These are political and political-adjacent
-        political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism', 
-                     'asktrumpsupporters', 'badeconomics', 'breadtube', 
-                     'completeanarchy', 'conservative', 'conspiracy', 
-                     'enlightenedcentrism', 'feminism', 'fullcommunism', 
-                     'genzedong', 'kotakuinaction', 'latestagecapitalism', 
-                     'libertarian', 'mensrights','moderatepolitics',
-                     'neoliberal', 'neutralpolitics', 'coronavirus', 
-                     'politicaldiscussion', 'politicalhumor', 'progressive', 
-                     'russialago', 'socialism', 'subredditdrama', 'theredpill', 
-                     'topmindsofreddit']
+        political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism',
+                     'anarcho_capitalism', 'asktrumpsupporters', 'badeconomics',
+                     'breadtube', 'communism', 'communism101', 'completeanarchy',
+                     'conservative', 'conservatives', 'conspiracy', 'economics',
+                     'enlightenedcentrism', 'feminism', 'firearms', 'fullcommunism',
+                     'genzedong', 'guns', 'historyporn', 'kotakuinaction',
+                     'latestagecapitalism', 'libertarian', 'libertarianmeme',
+                     'mapporn', 'mensrights', 'moderatepolitics', 'neoliberal',
+                     'neutralpolitics', 'coronavirus', 'polandball',
+                     'politicaldiscussion', 'politicalhumor', 'progressive',
+                     'progun', 'protectandserve', 'russialago', 'socialism',
+                     'socialism_101', 'subredditdrama', 'theredpill',
+                     'topmindsofreddit', 'tumblrinaction', 'ukpolitics',
+                     'vexillology']
 
         # Doing this instead of sets to maintain order
         subs = active_subs + [s for s in popular_subs if s not in active_subs]
