@@ -69,13 +69,11 @@ class Scraper():
         sub = self.r.subreddit(subreddit)
         try:
             posts = list(sub.top(time_filter=time_filter, limit=limit))
-
         except Forbidden:
             try:
                 sub.quaran.opt_in()
                 posts = list(sub.top(time_filter=time_filter, limit=limit))
                 print(f'Opted in to quarantined /r/{subreddit}')
-
             except Forbidden:
                 print(f'Subreddit /r/{subreddit} top posts forbidden')
                 return None
@@ -121,7 +119,6 @@ class Scraper():
 
         except KeyboardInterrupt:
             self.exit_safely(conn)
-
         conn.commit()
         conn.close()
 
