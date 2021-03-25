@@ -262,7 +262,11 @@ class Scraper():
                         for s in popular_subs][::-1]
 
         # politics, worldnews, and news already represented
-        # These are political and political-adjacent
+        # This list is for political and political-adjacent subs.
+        # Disclaimer that the inclusion of these subs is in no way
+        # an endorsement of their content or platform but an attempt to 
+        # analyze the prevalent types of speech in their communities.
+
         political = ['aboringdystopia', 'againsthatesubreddits', 'anarchism',
                      'anarcho_capitalism', 'asktrumpsupporters', 'badeconomics',
                      'breadtube', 'communism', 'communism101', 'completeanarchy',
