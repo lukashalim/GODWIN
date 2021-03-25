@@ -69,11 +69,13 @@ class Scraper():
         sub = self.r.subreddit(subreddit)
         try:
             posts = list(sub.top(time_filter=time_filter, limit=limit))
+        
         except Forbidden:
             try:
                 sub.quaran.opt_in()
                 posts = list(sub.top(time_filter=time_filter, limit=limit))
                 print(f'Opted in to quarantined /r/{subreddit}')
+            
             except Forbidden:
                 print(f'Subreddit /r/{subreddit} top posts forbidden')
                 return None
@@ -91,6 +93,9 @@ class Scraper():
         
         except Forbidden:
             print(f'Subreddit /r/{subreddit} top posts forbidden')
+
+        except KeyboardInterrupt:
+            self.exit_safely(conn)
 
         conn.commit()
         conn.close()
@@ -113,6 +118,9 @@ class Scraper():
         
         except Forbidden:
             print(f'Subreddit /r/{subreddit} top commented posts forbidden')
+
+        except KeyboardInterrupt:
+            self.exit_safely(conn)
         
         conn.commit()
         conn.close()
@@ -233,6 +241,12 @@ class Scraper():
         return any(item in text.lower() for item in self.failure_words)
 
     @staticmethod
+    def exit_safely(conn):
+        conn.commit()
+        conn.close()
+        raise KeyboardInterrupt
+
+    @staticmethod
     def get_subs():
         page = requests.get('http://redditlist.com/')
         tree = html.fromstring(page.text)
@@ -258,7 +272,7 @@ class Scraper():
                      'neoliberal', 'neutralpolitics', 'coronavirus', 
                      'politicaldiscussion', 'politicalhumor', 'progressive', 
                      'russialago', 'socialism', 'subredditdrama', 'theredpill', 
-                     'topmindsofreddit']
+                     'topmindsofreddit', 'tumblrinaction', 'ukpolitics']
 
         # Doing this instead of sets to maintain order
         subs = active_subs + [s for s in popular_subs if s not in active_subs]
