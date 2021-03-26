@@ -68,7 +68,7 @@ class Database():
                     df = pd.DataFrame({})
         return df
 
-    def get_data(self):
+    def get_data(self, fillna=False):
         qry = '''
               SELECT p.post_id, failure_in_post, subreddit, 
                   post_score, num_comments,
@@ -81,4 +81,11 @@ class Database():
                   p.post_id = f.post_id
               '''
         df = self.execute_sql(qry)
+
+        df['num_prev_comments'] += 1  # Off-by-one correction
+        df['failure'] = df['comment_id'].notnull().astype('int')
+
+        if fillna:
+            df['num_prev_comments'].fillna(df['num_comments'], inplace=True)
+
         return df
